@@ -48,6 +48,20 @@ SCREENSHOTS_DIR = os.path.join(BASE_DIR, "screenshots")
 os.makedirs(PROFILES_DIR, exist_ok=True)
 os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 
+# Anti-fingerprint: hide CDP/automation traces
+FINGERPRINT_HIDE_JS = """
+(() => {
+  try { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); } catch (e) {}
+  try { Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh', 'en-US', 'en'] }); } catch (e) {}
+  try { if (!window.chrome) window.chrome = {}; if (!window.chrome.runtime) window.chrome.runtime = {}; } catch (e) {}
+  try {
+    const oq = navigator.permissions.query.bind(navigator.permissions);
+    navigator.permissions.query = (p) => (p && p.name === 'notifications')
+      ? Promise.resolve({ state: Notification.permission }) : oq(p);
+  } catch (e) {}
+})();
+"""
+
 # Google One Offer Tokens (Universal across accounts/currencies)
 TOK_PRO5TB_12M   = "AVbCH/cspB8VdqKJ+ax/uPxUFAVuYRPX4iSjtg4Fu0PG9zUeURSM7y//LlQva1dCd/rbKVM6EJmyiG/C9BoQ95pMl8yDCHuiwCvM5CuGJME="
 TOK_PRO5TB_6M    = "AVbCH/fUON3w8hpfeutprA3BMQwrBwYIB6Y8CSWi1isDCDswKUUhGQ3dluj5WXsNKOvr8K5UULBGrRsf4KlW1rHLz0fF3SvxQhBFRbBOHCA="
@@ -1735,6 +1749,8 @@ class GoogleUltraAutomator:
             "--webrtc-ip-handling-policy=disable_non_proxied_udp",
             "--enforce-webrtc-ip-permission-check",
             "--start-maximized",
+            "--disable-blink-features=AutomationControlled",
+            "--disable-features=OptimizationHints,MediaRouter",
         ]
 
         if parsed_proxy:
@@ -1773,7 +1789,7 @@ class GoogleUltraAutomator:
             async with async_playwright() as p:
                 browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{self.port}")
                 context = browser.contexts[0]
-                await context.add_init_script("window.__INIT_TEST = null;\n" + HOOK_JS)
+                await context.add_init_script("window.__INIT_TEST = null;\n" + HOOK_JS + "\n" + FINGERPRINT_HIDE_JS)
 
                 page = context.pages[0] if context.pages else await context.new_page()
                 await page.set_viewport_size({"width": 1400, "height": 950})
