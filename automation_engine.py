@@ -13,16 +13,31 @@ import time
 from typing import Callable, Dict, Any, Optional
 from playwright.async_api import async_playwright
 
-def _find_chrome_path() -> str:
-    candidates = [
+def _find_browser_path() -> str:
+    """Detect available Chromium-based browser: Edge first, then Chrome."""
+    edge_candidates = [
+        os.path.expandvars(r"%PROGRAMFILES%\Microsoft\Edge\Application\msedge.exe"),
+        os.path.expandvars(r"%PROGRAMFILES(X86)%\Microsoft\Edge\Application\msedge.exe"),
+        os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"),
+    ]
+    chrome_candidates = [
         r"C:\Program Files\Google\Chrome\Application\chrome.exe",
         r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
         os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
     ]
-    for p in candidates:
+
+    for p in edge_candidates:
         if os.path.exists(p):
             return p
-    return candidates[0]
+    for p in chrome_candidates:
+        if os.path.exists(p):
+            return p
+    return edge_candidates[0]
+
+
+def _find_chrome_path() -> str:
+    """Backward-compatible alias."""
+    return _find_browser_path()
 
 
 CHROME_PATH = _find_chrome_path()
